@@ -5,11 +5,11 @@ pragma solidity ^0.6.0;
 import "./PoolControl.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
-contract SignUp is PoolControl {
+contract SignUpPool is PoolControl {
     event NewSignUp(uint256 PoolId, address UserAddress);
 
     modifier shouldBeActive(uint256 _poolId) {
-        require(isPoolActive(_poolId), "Pool is not Active");
+        require(isPoolActive[_poolId], "Pool is not Active or Created");
         _;
     }
 
@@ -21,16 +21,23 @@ contract SignUp is PoolControl {
         _;
     }
 
-    function SignUpETH(uint256 _poolId) external payable whenNotPaused shouldBeActive(_poolId) validateSender() {
+    function SignUp(uint256 _poolId) external payable whenNotPaused shouldBeActive(_poolId) validateSender() {
+        if(msg.value != 0){
+            SignUpETH(_poolId);
+        } else {
+            SignUpERC20(_poolId);
+        }
+    }
+
+    function SignUpETH(uint256 _poolId) internal {
         require(msg.value >= Fee, "Not Enough Fee Provided");
         emit NewSignUp(_poolId, msg.sender);
     }
 
-    function SignUpERC20(uint _poolId, address _tokenAddress) external whenNotPaused shouldBeActive(_poolId) validateSender() {
+    function SignUpERC20(uint _poolId) internal {
         if(Fee > 0){
-            TransferInToken(_tokenAddress, msg.sender, Fee);
+            TransferInToken(FeeTokenAddress, msg.sender, Fee);
         }
-        FeeMap[_tokenAddress] = SafeMath.add(FeeMap[_tokenAddress], Fee);
         emit NewSignUp(_poolId, msg.sender);
     }
 

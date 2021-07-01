@@ -10,20 +10,23 @@ import "openzeppelin-solidity/contracts/utils/Pausable.sol";
 contract Manageable is ETHHelper, ERC20Helper, GovManager, Pausable {
 
     uint256 public Fee;
-    mapping(address => uint256) public FeeMap;
+    address public FeeTokenAddress;
 
-    function SetFee(uint256 _fee) public onlyOwnerOrGov {
+    function SetFee(uint256 _fee) external onlyOwnerOrGov {
         Fee = _fee;
+    }
+
+    function SetFeeTokenAddress(address _token) external onlyOwnerOrGov {
+        FeeTokenAddress = _token;
     }
 
     function WithdrawETHFee(address payable _to) external onlyOwner {
         _to.transfer(address(this).balance);
     }
 
-    function WithdrawERC20Fee(address _tokenAddress, address _to) external onlyOwner {
-        uint256 bal = FeeMap[_tokenAddress];
-        FeeMap[_tokenAddress] = 0;
-        TransferToken(_tokenAddress, _to, bal);
+    function WithdrawERC20Fee(address _to) external onlyOwner {
+        uint256 bal = CheckBalance(FeeTokenAddress, address(this));
+        TransferToken(FeeTokenAddress, _to, bal);
     }
 
     function pause() external onlyOwnerOrGov {

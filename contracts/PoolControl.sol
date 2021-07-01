@@ -6,15 +6,11 @@ import "./Manageable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 contract PoolControl is Manageable {
-    event NewPoolCreated(uint256 PoolID);
+    event NewPoolActivated(uint256 PoolId);
+    event PoolActivated(uint256 PoolId);
+    event PoolDeactivated(uint256 PoolId);
     
-    struct Pool{
-        bool isActive;
-    }
-
-    mapping(uint256 => Pool) Pools;
-    mapping(address => uint256[]) PoolMap;
-
+    mapping(uint256 => bool) public isPoolActive;
     uint256 public PoolsCount;
 
     modifier validatePoolId(uint256 _poolId) {
@@ -23,21 +19,20 @@ contract PoolControl is Manageable {
     }
 
     function CreateNewPool() external onlyOwner {
-        Pools[PoolsCount] = Pool(false);
-        PoolMap[msg.sender].push(PoolsCount);
-        emit NewPoolCreated(PoolsCount);
+        isPoolActive[PoolsCount] = true;
+        emit NewPoolActivated(PoolsCount);
         PoolsCount = SafeMath.add(PoolsCount, 1);
     }
 
     function ActivatePool(uint256 _poolId) external onlyOwner validatePoolId(_poolId) {
-        Pools[_poolId].isActive = true;
+        require(!isPoolActive[_poolId], "Pool is Already Active");
+        isPoolActive[_poolId] = true;
+        emit PoolActivated(_poolId);
     }
 
     function DeactivatePool(uint256 _poolId) external onlyOwner validatePoolId(_poolId) {
-        Pools[_poolId].isActive = false;
-    }
-
-    function isPoolActive(uint256 _poolId) public view validatePoolId(_poolId) returns(bool) {
-        return Pools[_poolId].isActive;
+        require(isPoolActive[_poolId], "Pool is Already Inactive");
+        isPoolActive[_poolId] = false;
+        emit PoolDeactivated(_poolId);
     }
 }
