@@ -12,11 +12,13 @@ contract Manageable is ETHHelper, ERC20Helper, GovManager, Pausable {
     uint256 public Fee;
     address public FeeTokenAddress;
 
-    function SetFee(uint256 _fee) external onlyOwnerOrGov {
-        Fee = _fee;
+    function setEthFee(uint256 _amount) external onlyOwnerOrGov {
+        Fee = _amount;
+        FeeTokenAddress = address(0);
     }
 
-    function SetFeeTokenAddress(address _token) external onlyOwnerOrGov {
+    function setERC20Fee(address _token, uint256 _amount) external onlyOwnerOrGov {
+        Fee = _amount;
         FeeTokenAddress = _token;
     }
 

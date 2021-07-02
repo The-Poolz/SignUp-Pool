@@ -22,7 +22,7 @@ contract SignUpPool is PoolControl {
     }
 
     function SignUp(uint256 _poolId) external payable whenNotPaused shouldBeActive(_poolId) validateSender() {
-        if(msg.value != 0){
+        if(FeeTokenAddress == address(0)){
             SignUpETH(_poolId);
         } else {
             SignUpERC20(_poolId);
