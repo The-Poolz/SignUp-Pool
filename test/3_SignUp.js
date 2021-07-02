@@ -36,17 +36,23 @@ contract("Sign Up flow", accounts => {
             assert.equal(address, accounts[2])
         })
 
-        it('should fail to invest when fee not provided', async () => {
-            const tx = instance.SignUp(poolId, {from: accounts[3]})
-            await truffleAssert.reverts(tx, 'Not Enough Fee Provided')
-        })
-
+        
         it('withdrawing ETH Fee', async () => {
             const oldBal = await web3.eth.getBalance(accounts[9])
             const feeBal = await web3.eth.getBalance(instance.address)
             await instance.WithdrawETHFee(accounts[9], {from: ownerAddress})
             const newBal = await web3.eth.getBalance(accounts[9])
             assert.equal(parseInt(newBal), parseInt(oldBal) + parseInt(feeBal))
+        })
+
+        it('Fail to invest when fee not provided', async () => {
+            const tx = instance.SignUp(poolId, {from: accounts[3]})
+            await truffleAssert.reverts(tx, 'Not Enough Fee Provided')
+        })
+
+        it('Fail to Sign Up when Pool does not exist', async () => {
+            const tx = instance.SignUp(10, {from: accounts[5]})
+            truffleAssert.reverts(tx, 'Pool is not Active or Created')
         })
     })
 
@@ -80,5 +86,14 @@ contract("Sign Up flow", accounts => {
             assert.equal((newBal).toNumber(), (oldBal).toNumber() + (feeBal).toNumber())
         })
 
+        it('should SignUp when Fee is 0', async () => {
+            await instance.setERC20Fee(Token.address, 0, {from: ownerAddress})
+            const tx = await instance.SignUp(poolId, {from: accounts[6]})
+            // console.log(tx.logs)
+            const pid = tx.logs[0].args.PoolId
+            const address = tx.logs[0].args.UserAddress
+            assert.equal(pid, poolId)
+            assert.equal(address, accounts[6])
+        })
     })
 })

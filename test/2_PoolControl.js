@@ -43,4 +43,9 @@ contract('Pool Control', accounts => {
         await truffleAssert.reverts(tx, "Pool is Already Active")
     })
 
+    it('should fail to activate pool which does not exist', async () => {
+        const tx = instance.ActivatePool(10, {from: ownerAddress})
+        await truffleAssert.reverts(tx, "Invalid Pool ID")
+    })
+
 })
