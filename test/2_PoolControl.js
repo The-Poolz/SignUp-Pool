@@ -2,13 +2,12 @@ const SignUp = artifacts.require("SignUpPool");
 const { assert } = require('chai');
 const truffleAssert = require('truffle-assertions');
 const TestToken = artifacts.require("Token");
-// const zero_address = "0x0000000000000000000000000000000000000000";
 
 contract('Pool Control', accounts => {
     let instance, Token, ownerAddress = accounts[0], poolId
 
     before( async () => {
-        instance = await SignUp.deployed()
+        instance = await SignUp.new()
         Token = await TestToken.new('TestToken', 'TEST');
     })
 
