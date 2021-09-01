@@ -7,6 +7,7 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 contract SignUpPool is PoolControl {
     event NewSignUp(uint256 PoolId, address UserAddress);
+    event NewSignUpNFT(uint256 PoolId, address UserAddress, address TokenAddress, uint256 TokenId);
 
     modifier shouldBeActive(uint256 _poolId) {
         require(isPoolActive[_poolId], "Pool is not Active or Created");
@@ -27,6 +28,15 @@ contract SignUpPool is PoolControl {
         } else {
             SignUpERC20(_poolId);
         }
+    }
+    
+    function SignUpWithNFT(
+        uint256 _poolId,
+        address _tokenAddress,
+        uint256 _tokenId
+    ) external whenNotPaused shouldBeActive(_poolId) validateSender() {
+        TransferNFTIn(_tokenAddress, _tokenId, msg.sender);
+        emit NewSignUpNFT(_poolId, msg.sender, _tokenAddress, _tokenId);
     }
 
     function SignUpETH(uint256 _poolId) internal {
