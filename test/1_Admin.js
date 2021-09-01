@@ -1,13 +1,15 @@
 const SignUp = artifacts.require("SignUpPool");
 const { assert } = require('chai');
 const TestToken = artifacts.require("Token");
+const TestNFT = artifacts.require("MyNFT");
 const zero_address = "0x0000000000000000000000000000000000000000";
 
 contract('Admin Settings', accounts => {
-    let instance, Token, ownerAddress = accounts[0]
+    let instance, Token, NFT, ownerAddress = accounts[0]
 
     before( async () => {
         instance = await SignUp.new()
+        NFT = await TestNFT.new()
         Token = await TestToken.new('TestToken', 'TEST');
     })
 
@@ -38,6 +40,18 @@ contract('Admin Settings', accounts => {
     it('should unpause', async () => {
         await instance.unpause({from: ownerAddress})
         const result = await instance.paused()
+        assert.equal(result, false)
+    })
+
+    it('should approve address for all NFTs', async () => {
+        await instance.ApproveAllNFT(NFT.address, ownerAddress, true)
+        const result = await NFT.isApprovedForAll(instance.address, ownerAddress)
+        assert.equal(result, true)
+    })
+    
+    it('should revoke approval address for all NFTs', async () => {
+        await instance.ApproveAllNFT(NFT.address, ownerAddress, false)
+        const result = await NFT.isApprovedForAll(instance.address, ownerAddress)
         assert.equal(result, false)
     })
 })

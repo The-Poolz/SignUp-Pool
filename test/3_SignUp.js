@@ -2,13 +2,15 @@ const SignUp = artifacts.require("SignUpPool");
 const { assert } = require('chai');
 const truffleAssert = require('truffle-assertions');
 const TestToken = artifacts.require("Token");
+const TestNFT = artifacts.require("MyNFT")
 
 contract("Sign Up flow", accounts => {
-    let instance, Token, poolId, ownerAddress = accounts[0], user1 = accounts[1]
+    let instance, Token, NFT, poolId, ownerAddress = accounts[0], user1 = accounts[1]
 
     before( async () => {
         instance = await SignUp.new()
         Token = await TestToken.new('TestToken', 'TEST');
+        NFT = await TestNFT.new()
         const tx = await instance.CreateNewPool({from: ownerAddress})
         poolId = tx.logs[0].args[0].toNumber()
     })
@@ -89,11 +91,56 @@ contract("Sign Up flow", accounts => {
         it('should SignUp when Fee is 0', async () => {
             await instance.setERC20Fee(Token.address, 0, {from: ownerAddress})
             const tx = await instance.SignUp(poolId, {from: accounts[6]})
-            // console.log(tx.logs)
             const pid = tx.logs[0].args.PoolId
             const address = tx.logs[0].args.UserAddress
             assert.equal(pid, poolId)
             assert.equal(address, accounts[6])
         })
+    })
+
+    describe('Signing Up with ERC721', () => {
+        let tokenId
+
+        it('Minting new NFT', async () => {
+            const tx = await NFT.awardItem(ownerAddress, {from: ownerAddress})
+            tokenId = tx.logs[0].args.tokenId.toString()
+            const owner = await NFT.ownerOf(tokenId)
+            const bal = await NFT.balanceOf(ownerAddress)
+            assert.equal(owner, ownerAddress)
+            assert.equal(bal, 1)
+        })
+
+        it('Signing Up with NFT by single approval', async () => {
+            await NFT.approve(instance.address, tokenId, {from: ownerAddress})
+            const tx = await instance.SignUpWithNFT(poolId, NFT.address, tokenId)
+            const userAddress = tx.logs[1].args.UserAddress
+            const tokenAddress = tx.logs[1].args.TokenAddress
+            const tid = tx.logs[1].args.TokenId
+            const nftOnwer = await NFT.ownerOf(tokenId)
+            assert.equal(userAddress, ownerAddress)
+            assert.equal(tokenAddress, NFT.address)
+            assert.equal(tid, tokenId)
+            assert.equal(nftOnwer, instance.address)
+        })
+
+        it('Withdrawing NFT', async () => {
+            const tx = await instance.WithdrawNFT(NFT.address, tokenId, ownerAddress, {from: ownerAddress})
+            const newOwner = await NFT.ownerOf(tokenId)
+            assert.equal(newOwner, ownerAddress)
+        })
+
+        it('Signing Up with NFT by All Approval', async () => {
+            await NFT.setApprovalForAll(instance.address, true, {from: ownerAddress})
+            const tx = await instance.SignUpWithNFT(poolId, NFT.address, tokenId)
+            const userAddress = tx.logs[1].args.UserAddress
+            const tokenAddress = tx.logs[1].args.TokenAddress
+            const tid = tx.logs[1].args.TokenId
+            const nftOnwer = await NFT.ownerOf(tokenId)
+            assert.equal(userAddress, ownerAddress)
+            assert.equal(tokenAddress, NFT.address)
+            assert.equal(tid, tokenId)
+            assert.equal(nftOnwer, instance.address)
+        })
+
     })
 })
