@@ -54,7 +54,7 @@ contract("Sign Up flow", accounts => {
 
         it('Fail to Sign Up when Pool does not exist', async () => {
             const tx = instance.SignUp(10, {from: accounts[5]})
-            truffleAssert.reverts(tx, 'Pool is not Active or Created')
+            await truffleAssert.reverts(tx, 'Pool is not Active or Created')
         })
     })
 
@@ -98,7 +98,7 @@ contract("Sign Up flow", accounts => {
         })
     })
 
-    describe('Signing Up with ERC721', () => {
+    describe('Signing Up with ERC721 using traditional approve and transfer method', () => {
         let tokenId
 
         it('Minting new NFT', async () => {
@@ -142,5 +142,41 @@ contract("Sign Up flow", accounts => {
             assert.equal(nftOnwer, instance.address)
         })
 
+    })
+
+    describe('Signing up with ERC721 using safe transfer', () => {
+        let tokenId, newPoolId
+
+        it(`deactivating Pool ID ${poolId} and creating new Pool`, async () => {
+            // doing this so people cannot call safeTransfer without data
+            await instance.DeactivatePool(poolId, {from: ownerAddress})
+            const tx = await instance.CreateNewPool({from: ownerAddress})
+            newPoolId = tx.logs[0].args[0].toNumber()
+            const poolOneStatus = await instance.isPoolActive(poolId)
+            const poolTwoStatus = await instance.isPoolActive(newPoolId)
+            assert.isFalse(poolOneStatus)
+            assert.isTrue(poolTwoStatus)
+        })
+
+        it('Minting new NFT', async () => {
+            const tx = await NFT.awardItem(ownerAddress, {from: ownerAddress})
+            tokenId = tx.logs[0].args.tokenId.toString()
+            const owner = await NFT.ownerOf(tokenId)
+            const bal = await NFT.balanceOf(ownerAddress)
+            assert.equal(owner, ownerAddress)
+            assert.equal(bal, 1)
+        })
+
+        it('should fail when sending token without data', async () => {
+            const tx = NFT.safeTransferFrom(ownerAddress, instance.address, tokenId, {from: ownerAddress, gas: 999999})
+            await truffleAssert.reverts(tx , 'Pool is not Active or Created')
+        })
+
+        it('should sign up with NFT using safeTransfer', async () => {
+            const oneEncoded = web3.eth.abi.encodeParameter('uint256', newPoolId.toString())
+            const tx = await NFT.safeTransferFrom(ownerAddress, instance.address, tokenId, oneEncoded)
+            console.log(tx.logs.length)
+            console.log(tx.logs)
+        })
     })
 })

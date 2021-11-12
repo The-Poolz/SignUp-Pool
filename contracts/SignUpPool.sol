@@ -39,6 +39,13 @@ contract SignUpPool is PoolControl {
         emit NewSignUpNFT(_poolId, msg.sender, _tokenAddress, _tokenId);
     }
 
+    function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data) external whenNotPaused returns(bytes4){
+        uint256 poolId = bytesToUint(data);
+        require(isPoolActive[poolId], "Pool is not Active or Created");
+        emit NewSignUpNFT(poolId, from, msg.sender, tokenId);
+        return this.onERC721Received.selector;
+    }
+
     function SignUpETH(uint256 _poolId) internal {
         require(msg.value >= Fee, "Not Enough Fee Provided");
         emit NewSignUp(_poolId, msg.sender);
@@ -58,5 +65,13 @@ contract SignUpPool is PoolControl {
             size := extcodesize(_addr)
         }
         return (size > 0);
+    }
+
+    function bytesToUint(bytes memory data) internal view returns (uint256){
+        uint256 num;
+        assembly {
+            num := mload(add(data, 32))
+        }
+        return num;
     }
 }
