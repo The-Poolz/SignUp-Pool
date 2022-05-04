@@ -22,20 +22,20 @@ contract PoolControl is Manageable {
     function CreateNewPool() external {
         isPoolActive[PoolsCount] = true;
         emit NewPoolActivated(PoolsCount);
-        PoolsCount = SafeMath.add(PoolsCount, 1);
         poolOwner[PoolsCount] = msg.sender;
+        PoolsCount = SafeMath.add(PoolsCount, 1);
     }
 
     function ActivatePool(uint256 _poolId) external validatePoolId(_poolId) {
         require(!isPoolActive[_poolId], "Pool is Already Active");
-        require(poolOwner[PoolsCount] == msg.sender, "Invalid Pool owner");
+        require(poolOwner[_poolId] == msg.sender, "Invalid Pool owner");
         isPoolActive[_poolId] = true;
         emit PoolActivated(_poolId);
     }
 
     function DeactivatePool(uint256 _poolId) external validatePoolId(_poolId) {
         require(isPoolActive[_poolId], "Pool is Already Inactive");
-        require(poolOwner[PoolsCount] == msg.sender, "Invalid Pool owner");
+        require(poolOwner[_poolId] == msg.sender, "Invalid Pool owner");
         isPoolActive[_poolId] = false;
         emit PoolDeactivated(_poolId);
     }
