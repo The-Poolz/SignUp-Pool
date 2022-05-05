@@ -4,7 +4,8 @@ const truffleAssert = require('truffle-assertions');
 const TestToken = artifacts.require("Token");
 
 contract('Pool Control', accounts => {
-    let instance, Token, ownerAddress = accounts[0], poolId
+    let instance, Token, poolId
+    const ownerAddress = accounts[0], investor = accounts[2]
 
     before( async () => {
         instance = await SignUp.new()
@@ -48,4 +49,12 @@ contract('Pool Control', accounts => {
         await truffleAssert.reverts(tx, "Invalid Pool ID")
     })
 
+    it('should fail to deactivate when invalid pool owner ', async () => {
+        await truffleAssert.reverts(instance.DeactivatePool(poolId, { from: investor }), "Invalid Pool owner")
+    })
+
+    it('should fail to activate when invalid pool owner', async () => {
+        await instance.DeactivatePool(poolId, {from: ownerAddress})
+        await truffleAssert.reverts(instance.ActivatePool(poolId, { from: investor }), "Invalid Pool owner")
+    })
 })
