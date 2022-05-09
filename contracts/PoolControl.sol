@@ -59,8 +59,6 @@ contract PoolControl is Manageable {
         emit PoolDeactivated(_poolId);
     }
 
-    event test(uint256 reserve);
-
     function WithdrawPoolFee(uint256 _poolId) external onlyPoolOwner(_poolId) {
         WithdrawFee(
             poolsMap[_poolId].FeeToken,
