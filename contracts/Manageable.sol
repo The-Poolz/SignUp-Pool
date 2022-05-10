@@ -8,35 +8,56 @@ import "poolz-helper/contracts/ETHHelper.sol";
 import "poolz-helper/contracts/GovManager.sol";
 import "openzeppelin-solidity/contracts/utils/Pausable.sol";
 
-contract Manageable is ETHHelper, ERC20Helper, GovManager, Pausable, ERC721Helper {
-
+contract Manageable is
+    ETHHelper,
+    ERC20Helper,
+    GovManager,
+    Pausable,
+    ERC721Helper
+{
     uint256 public Fee;
-    address public FeeTokenAddress;
+    address public FeeToken;
+    uint256 public Reserve;
 
-    function setEthFee(uint256 _amount) external onlyOwnerOrGov {
+    function setFee(address _token, uint256 _amount) external onlyOwnerOrGov {
+        if (Reserve > 0) {
+            WithdrawFee(msg.sender); // If the admin tries to set a new token without withrowing the old one
+        }
         Fee = _amount;
-        FeeTokenAddress = address(0);
+        FeeToken = _token; // set address(0) to use ETH/BNB as main coin
     }
 
-    function setERC20Fee(address _token, uint256 _amount) external onlyOwnerOrGov {
-        Fee = _amount;
-        FeeTokenAddress = _token;
+    function WithdrawFee(address payable _to) public onlyOwnerOrGov {
+        WithdrawFee(FeeToken, _to, Reserve);
+        Reserve = 0;
     }
 
-    function WithdrawETHFee(address payable _to) external onlyOwner {
-        _to.transfer(address(this).balance);
+    function WithdrawFee(
+        address _token,
+        address payable _to,
+        uint256 _reserve
+    ) internal {
+        require(_reserve > 0, "Fee amount is zero");
+        if (_token == address(0)) {
+            _to.transfer(_reserve);
+        } else {
+            TransferToken(_token, _to, _reserve);
+        }
     }
 
-    function WithdrawERC20Fee(address _to) external onlyOwner {
-        uint256 bal = CheckBalance(FeeTokenAddress, address(this));
-        TransferToken(FeeTokenAddress, _to, bal);
-    }
-
-    function WithdrawNFT(address _token, uint256 _tokenId, address _to) external onlyOwner {
+    function WithdrawNFT(
+        address _token,
+        uint256 _tokenId,
+        address _to
+    ) external onlyOwner {
         TransferNFTOut(_token, _tokenId, _to);
     }
 
-    function ApproveAllNFT(address _token, address _to, bool _approve) external onlyOwner {
+    function ApproveAllNFT(
+        address _token,
+        address _to,
+        bool _approve
+    ) external onlyOwner {
         SetApproveForAllNFT(_token, _to, _approve);
     }
 
