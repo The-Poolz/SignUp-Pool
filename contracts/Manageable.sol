@@ -15,27 +15,21 @@ contract Manageable is
     Pausable,
     ERC721Helper
 {
-    struct Pool {
-        address payable Owner; // The pool owner or admin
-        address FeeToken; // Which token will be used
-        uint256 Fee; // The pool fee
-        uint256 Reserve; // Reserve of fee
-    }
-
-    Pool public Admin;
-
-    constructor() public {
-        Admin.Owner = payable(owner());
-    }
+    uint256 public Fee;
+    address public FeeToken;
+    uint256 public Reserve;
 
     function setFee(address _token, uint256 _amount) external onlyOwnerOrGov {
-        Admin.Fee = _amount;
-        Admin.FeeToken = _token; // set address(0) to use ETH/BNB as main coin
+        if (Reserve > 0) {
+            WithdrawFee(msg.sender); // If the admin tries to set a new token without withrowing the old one
+        }
+        Fee = _amount;
+        FeeToken = _token; // set address(0) to use ETH/BNB as main coin
     }
 
-    function WithdrawFee(address payable _to) external onlyOwnerOrGov {
-        WithdrawFee(Admin.FeeToken, _to, Admin.Reserve);
-        Admin.Reserve = 0;
+    function WithdrawFee(address payable _to) public onlyOwnerOrGov {
+        WithdrawFee(FeeToken, _to, Reserve);
+        Reserve = 0;
     }
 
     function WithdrawFee(

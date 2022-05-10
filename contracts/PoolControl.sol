@@ -15,9 +15,16 @@ contract PoolControl is Manageable {
     event PoolActivated(uint256 PoolId);
     event PoolDeactivated(uint256 PoolId);
 
-    mapping(uint256 => bool) public isPoolActive;
     mapping(uint256 => Pool) public poolsMap;
     uint256 public PoolsCount;
+
+    struct Pool {
+        address payable Owner; // The pool owner
+        address FeeToken; // Which token will be used
+        uint256 Fee; // The pool fee
+        uint256 Reserve; // Reserve of fee
+        bool status; // is pool active
+    }
 
     modifier validatePoolId(uint256 _poolId) {
         require(_poolId < PoolsCount, "Invalid Pool ID");
@@ -29,9 +36,14 @@ contract PoolControl is Manageable {
         _;
     }
 
+    modifier validateStatus(uint256 _poolId, bool _status) {
+        require(poolsMap[_poolId].status == _status, "Invalid pool status");
+        _;
+    }
+
     function CreateNewPool(address _token, uint256 _price) external {
-        isPoolActive[PoolsCount] = true;
         Pool storage newPool = poolsMap[PoolsCount];
+        newPool.status = true;
         newPool.Owner = msg.sender;
         newPool.FeeToken = _token;
         newPool.Fee = _price;
@@ -43,9 +55,9 @@ contract PoolControl is Manageable {
         external
         validatePoolId(_poolId)
         onlyPoolOwner(_poolId)
+        validateStatus(_poolId, false)
     {
-        require(!isPoolActive[_poolId], "Pool is Already Active");
-        isPoolActive[_poolId] = true;
+        poolsMap[_poolId].status = true;
         emit PoolActivated(_poolId);
     }
 
@@ -53,9 +65,9 @@ contract PoolControl is Manageable {
         external
         validatePoolId(_poolId)
         onlyPoolOwner(_poolId)
+        validateStatus(_poolId, true)
     {
-        require(isPoolActive[_poolId], "Pool is Already Inactive");
-        isPoolActive[_poolId] = false;
+        poolsMap[_poolId].status = false;
         emit PoolDeactivated(_poolId);
     }
 

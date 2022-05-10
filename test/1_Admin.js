@@ -16,17 +16,19 @@ contract('Admin Settings', accounts => {
     it('should set ETH Fee', async () => {
         const fee = web3.utils.toWei('0.01', 'ether')
         await instance.setFee(constants.ZERO_ADDRESS, fee, { from: ownerAddress })
-        const admin = await instance.Admin()
-        assert.equal(admin['Fee'], fee)
-        assert.equal(admin['FeeToken'], constants.ZERO_ADDRESS)
+        const actualFee = await instance.Fee()
+        const feeToken = await instance.FeeToken()
+        assert.equal(actualFee, fee)
+        assert.equal(feeToken, constants.ZERO_ADDRESS)
     })
 
     it('should set/get FeeTokenAddress', async () => {
         const fee = '10000'
         await instance.setFee(Token.address, fee, { from: ownerAddress })
-        const admin = await instance.Admin()
-        assert.equal(admin['FeeToken'], Token.address)
-        assert.equal(admin['Fee'], fee)
+        const actualFee = await instance.Fee()
+        const feeToken = await instance.FeeToken()
+        assert.equal(feeToken, Token.address)
+        assert.equal(actualFee, fee)
     })
 
     it('should pause', async () => {

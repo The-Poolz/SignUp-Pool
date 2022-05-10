@@ -18,33 +18,33 @@ contract('Pool Control', accounts => {
     it('should activate a new pool', async () => {
         const tx = await instance.CreateNewPool(constants.ZERO_ADDRESS, price, { from: ownerAddress })
         poolId = tx.logs[0].args.PoolId
-        const result = await instance.isPoolActive(poolId)
+        const result = await instance.poolsMap(poolId)
         assert.equal(tx.logs[0].event, 'NewPoolCreated')
-        assert.equal(result, true)
+        assert.equal(result['status'], true)
     })
 
     it('should deactive existing pool', async () => {
         const tx = await instance.DeactivatePool(poolId, { from: ownerAddress })
-        const result = await instance.isPoolActive(poolId)
+        const result = await instance.poolsMap(poolId)
         assert.equal(tx.logs[0].event, 'PoolDeactivated')
-        assert.equal(result, false)
+        assert.equal(result['status'], false)
     })
 
     it('should fail to deactivate when already inactive', async () => {
         const tx = instance.DeactivatePool(poolId, { from: ownerAddress })
-        await truffleAssert.reverts(tx, "Pool is Already Inactive")
+        await truffleAssert.reverts(tx, "Invalid pool status")
     })
 
     it('should activate existing pool', async () => {
         const tx = await instance.ActivatePool(poolId, { from: ownerAddress })
-        const result = await instance.isPoolActive(poolId)
+        const result = await instance.poolsMap(poolId)
         assert.equal(tx.logs[0].event, 'PoolActivated')
-        assert.equal(result, true)
+        assert.equal(result['status'], true)
     })
 
     it('should fail to activate when already active', async () => {
         const tx = instance.ActivatePool(poolId, { from: ownerAddress })
-        await truffleAssert.reverts(tx, "Pool is Already Active")
+        await truffleAssert.reverts(tx, "Invalid pool status")
     })
 
     it('should fail to activate pool which does not exist', async () => {

@@ -13,11 +13,6 @@ contract SignUpPool is PoolControl {
         uint256 TokenId
     );
 
-    modifier shouldBeActive(uint256 _poolId) {
-        require(isPoolActive[_poolId], "Pool is not Active or Created");
-        _;
-    }
-
     modifier validateSender() {
         require(
             msg.sender == tx.origin && !isContract(msg.sender),
@@ -30,20 +25,20 @@ contract SignUpPool is PoolControl {
         external
         payable
         whenNotPaused
-        shouldBeActive(_poolId)
+        validateStatus(_poolId, true)
         validateSender
     {
         Pool storage signUpPool = poolsMap[_poolId];
-        if (Admin.FeeToken == address(0) && signUpPool.FeeToken == address(0)) {
-            SignUpETH(address(0), Admin.Fee + poolsMap[_poolId].Fee);
+        if (FeeToken == address(0) && signUpPool.FeeToken == address(0)) {
+            SignUpETH(address(0), Fee + poolsMap[_poolId].Fee);
         } else {
             // check all combinations of fees
-            SignUpETH(Admin.FeeToken, Admin.Fee);
-            SignUpERC20(Admin.FeeToken, Admin.Fee);
+            SignUpETH(FeeToken, Fee);
+            SignUpERC20(FeeToken, Fee);
             SignUpETH(signUpPool.FeeToken, signUpPool.Fee);
             SignUpERC20(signUpPool.FeeToken, signUpPool.Fee);
         }
-        Admin.Reserve = SafeMath.add(Admin.Reserve, Admin.Fee);
+        Reserve = SafeMath.add(Reserve, Fee);
         signUpPool.Reserve = SafeMath.add(signUpPool.Reserve, signUpPool.Fee);
         emit NewSignUp(_poolId, msg.sender);
     }
@@ -62,7 +57,7 @@ contract SignUpPool is PoolControl {
         uint256 _poolId,
         address _tokenAddress,
         uint256 _tokenId
-    ) external whenNotPaused shouldBeActive(_poolId) validateSender {
+    ) external whenNotPaused validateStatus(_poolId, true) validateSender {
         TransferNFTIn(_tokenAddress, _tokenId, msg.sender);
         emit NewSignUpNFT(_poolId, msg.sender, _tokenAddress, _tokenId);
     }

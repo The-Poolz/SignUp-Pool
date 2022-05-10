@@ -57,7 +57,7 @@ contract("Sign Up flow", accounts => {
 
         it('Fail to Sign Up when Pool does not exist', async () => {
             const tx = instance.SignUp(10, { from: accounts[5] })
-            truffleAssert.reverts(tx, 'Pool is not Active or Created')
+            truffleAssert.reverts(tx, 'Invalid pool status')
         })
     })
 
@@ -66,7 +66,7 @@ contract("Sign Up flow", accounts => {
 
         before(async () => {
             await instance.setFee(Token.address, fee, { from: ownerAddress })
-            await Token.transfer(accounts[3], fee, { from: ownerAddress })
+            await Token.transfer(accounts[3], fee * 2, { from: ownerAddress })
         })
 
         it('should sign up paying Fee in ERC20', async () => {
@@ -98,6 +98,19 @@ contract("Sign Up flow", accounts => {
             const address = tx.logs[0].args.UserAddress
             assert.equal(pid, poolId)
             assert.equal(address, accounts[6])
+        })
+
+        it('should withdraw if reserve greatter than zero', async () => {
+            const tx = await instance.CreateNewPool(Token.address, price, { from: ownerAddress })
+            poolId = tx.logs[0].args[0].toNumber()
+            await instance.setFee(Token.address, fee, { from: ownerAddress })
+            const oldBal = await Token.balanceOf(ownerAddress)
+            await Token.approve(instance.address, fee, { from: accounts[3] })
+            await instance.SignUp(poolId, { from: accounts[3] })
+            await instance.setFee(Token.address, fee, { from: ownerAddress })
+            const actualBalance = await Token.balanceOf(ownerAddress)
+            assert.equal(oldBal.toString(), (await Token.totalSupply() - fee * 2), 'invalid balance')
+            assert.equal(actualBalance, (await Token.totalSupply() - fee), 'invalid balance')
         })
     })
 
