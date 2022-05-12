@@ -8,15 +8,18 @@ const constants = require('@openzeppelin/test-helpers/src/constants.js');
 
 
 contract("Sign Up flow", accounts => {
-    let instance, Token, NFT, poolId, ownerAddress = accounts[0], user1 = accounts[1]
-    const price = '0'
+    let instance, Token, NFT, poolId, poolId2, ownerAddress = accounts[0], user1 = accounts[1]
+    const price = '0';
+    let feePrice = "5";
 
     before(async () => {
         instance = await SignUp.new()
         Token = await TestToken.new('TestToken', 'TEST');
         NFT = await TestNFT.new()
-        const tx = await instance.CreateNewPool(constants.ZERO_ADDRESS, price, { from: ownerAddress })
+        const tx = await instance.CreateNewPool(constants.ZERO_ADDRESS, price, { from: accounts[6] })
+        const tx2 = await instance.CreateNewPool(constants.ZERO_ADDRESS, feePrice, { from: accounts[6] })
         poolId = tx.logs[0].args[0].toNumber()
+        poolId2 = tx2.logs[0].args[0].toNumber()
     })
 
     it('Signing Up when Fee is Zero', async () => {
@@ -43,74 +46,95 @@ contract("Sign Up flow", accounts => {
         })
 
         it('withdrawing ETH Fee', async () => {
-            const oldBal = await web3.eth.getBalance(accounts[9])
-            const feeBal = await web3.eth.getBalance(instance.address)
-            await instance.WithdrawFee(accounts[9], { from: ownerAddress })
-            const newBal = await web3.eth.getBalance(accounts[9])
-            assert.equal(parseInt(newBal), parseInt(oldBal) + parseInt(feeBal))
+            const tx = await instance.CreateNewPool(constants.ZERO_ADDRESS, fee, { from: accounts[9], value: fee })
+            poolId = tx.logs[0].args.PoolId
+            const oldBal = new BigNumber((await web3.eth.getBalance(accounts[9])))
+
+            const txnReceipt = await instance.WithdrawFee(accounts[9], { from: ownerAddress })
+            const rcpt = await web3.eth.getTransaction(txnReceipt.tx)
+            const gasPrice = rcpt.gasPrice
+            const actualBalance = new BigNumber((await web3.eth.getBalance(accounts[9])))
+            const expectedBalance = BigNumber.sum(oldBal, fee)
+
+            assert.equal(actualBalance.toString(), expectedBalance.toString())
         })
 
         it('Fail to invest when fee not provided', async () => {
-            const tx = instance.SignUp(poolId, { from: accounts[3] })
+            const tx = instance.SignUp(poolId2, { from: accounts[3] })
             await truffleAssert.reverts(tx, 'Not Enough Fee Provided')
         })
 
         it('Fail to Sign Up when Pool does not exist', async () => {
-            const tx = instance.SignUp(10, { from: accounts[5] })
+            const tx = instance.SignUp(10, { from: accounts[5], value: '10' })
             truffleAssert.reverts(tx, 'Invalid pool status')
         })
     })
 
     describe('Signing Up with ERC20', () => {
-        const fee = '10000'
+        const fee = '1000'
+        let poolId3;
 
         before(async () => {
             await instance.setFee(Token.address, fee, { from: ownerAddress })
-            await Token.transfer(accounts[3], fee * 2, { from: ownerAddress })
+            await Token.transfer(accounts[3], fee, { from: ownerAddress })
+            await Token.approve(instance.address, fee, { from: accounts[3] })
+            const tx = await instance.CreateNewPool(Token.address, fee, { from: accounts[3] })
+            poolId3 = tx.logs[1].args.PoolId
         })
 
         it('should sign up paying Fee in ERC20', async () => {
-            await Token.approve(instance.address, fee, { from: accounts[3] })
-            const tx = await instance.SignUp(poolId, { from: accounts[3] })
+            await Token.transfer(accounts[4], fee, { from: ownerAddress })
+            await Token.approve(instance.address, fee, { from: accounts[4] })
+            const tx = await instance.SignUp(poolId3, { from: accounts[4] })
             const pid = tx.logs[1].args.PoolId
             const address = tx.logs[1].args.UserAddress
-            assert.equal(pid, poolId)
-            assert.equal(address, accounts[3])
+            assert.equal(pid.toNumber(), poolId3.toNumber())
+            assert.equal(address, accounts[4])
         })
 
         it('should fail to invest when Fee not provided', async () => {
-            const tx = instance.SignUp(poolId, { from: accounts[4] })
-            await truffleAssert.reverts(tx, 'no allowance') // revert msg from poolz-helper
+            const tx = instance.SignUp(poolId2, { from: accounts[4] })
+            await truffleAssert.reverts(tx, 'Not Enough Fee Provided') // revert msg from poolz-helper
         })
 
         it('withdrawing ERC20 Fee', async () => {
             const oldBal = await Token.balanceOf(accounts[9])
-            const feeBal = await Token.balanceOf(instance.address)
+            const feeBal = await instance.Reserve()
             await instance.WithdrawFee(accounts[9], { from: ownerAddress })
             const newBal = await Token.balanceOf(accounts[9])
             assert.equal((newBal).toNumber(), (oldBal).toNumber() + (feeBal).toNumber())
         })
 
         it('should SignUp when Fee is 0', async () => {
-            await instance.setFee(Token.address, 0, { from: ownerAddress })
-            const tx = await instance.SignUp(poolId, { from: accounts[6] })
-            const pid = tx.logs[0].args.PoolId
-            const address = tx.logs[0].args.UserAddress
-            assert.equal(pid, poolId)
+            await Token.transfer(accounts[6], fee, { from: ownerAddress })
+            await Token.approve(instance.address, fee, { from: accounts[6] })
+            const tx = await instance.CreateNewPool(Token.address, 0, { from: accounts[6] })
+            const poolId = tx.logs[1].args.PoolId
+            const tx2 = await instance.SignUp(poolId, { from: accounts[6] })
+            const pid = tx2.logs[0].args.PoolId
+            const address = tx2.logs[0].args.UserAddress
+            assert.equal(pid.toString(), poolId.toString())
             assert.equal(address, accounts[6])
         })
 
         it('should withdraw if reserve greatter than zero', async () => {
-            const tx = await instance.CreateNewPool(Token.address, price, { from: ownerAddress })
-            poolId = tx.logs[0].args[0].toNumber()
+            const fee = 1000           
+            const oldOldBal = await Token.balanceOf(ownerAddress)
             await instance.setFee(Token.address, fee, { from: ownerAddress })
+            await Token.approve(instance.address, fee, { from: accounts[5] })
+            await Token.transfer(accounts[5], fee, { from: ownerAddress })
+            const tx = await instance.CreateNewPool(Token.address, fee, { from: accounts[5] })
+            poolId = tx.logs[1].args.PoolId
             const oldBal = await Token.balanceOf(ownerAddress)
-            await Token.approve(instance.address, fee, { from: accounts[3] })
-            await instance.SignUp(poolId, { from: accounts[3] })
+            await Token.transfer(accounts[4], fee, { from: ownerAddress })
+            const nextBal = await Token.balanceOf(ownerAddress)
+            await Token.approve(instance.address, fee, { from: accounts[4] })
+            await instance.SignUp(poolId, { from: accounts[4] })
             await instance.setFee(Token.address, fee, { from: ownerAddress })
             const actualBalance = await Token.balanceOf(ownerAddress)
-            assert.equal(oldBal.toString(), (await Token.totalSupply() - fee * 2), 'invalid balance')
-            assert.equal(actualBalance, (await Token.totalSupply() - fee), 'invalid balance')
+            assert.equal(oldBal.toNumber(), (nextBal.toNumber() + fee))
+            assert.equal(oldBal.toNumber(), (await Token.totalSupply() - fee * 3).toString(), 'invalid balance')
+            assert.equal(actualBalance.toNumber(), (await Token.totalSupply() - fee * 3).toString(), 'invalid balance')
         })
     })
 

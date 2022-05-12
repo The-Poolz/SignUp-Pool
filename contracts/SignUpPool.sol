@@ -29,28 +29,9 @@ contract SignUpPool is PoolControl {
         validateSender
     {
         Pool storage signUpPool = poolsMap[_poolId];
-        if (FeeToken == address(0) && signUpPool.FeeToken == address(0)) {
-            SignUpETH(address(0), Fee + poolsMap[_poolId].Fee);
-        } else {
-            // check all combinations of fees
-            SignUpETH(FeeToken, Fee);
-            SignUpERC20(FeeToken, Fee);
-            SignUpETH(signUpPool.FeeToken, signUpPool.Fee);
-            SignUpERC20(signUpPool.FeeToken, signUpPool.Fee);
-        }
-        Reserve = SafeMath.add(Reserve, Fee);
+        PayFee(signUpPool.FeeToken, signUpPool.Fee);
         signUpPool.Reserve = SafeMath.add(signUpPool.Reserve, signUpPool.Fee);
         emit NewSignUp(_poolId, msg.sender);
-    }
-
-    function SignUpETH(address _token, uint256 _fee) internal {
-        if (_token == address(0) && _fee > 0)
-            require(msg.value >= _fee, "Not Enough Fee Provided");
-    }
-
-    function SignUpERC20(address _token, uint256 _fee) internal {
-        if (_token != address(0) && _fee > 0)
-            TransferInToken(_token, msg.sender, _fee);
     }
 
     function SignUpWithNFT(
