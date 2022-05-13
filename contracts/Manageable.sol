@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.0;
+pragma solidity ^0.8.0;
 
-import "poolz-helper/contracts/ERC20Helper.sol";
-import "poolz-helper/contracts/ERC721Helper.sol";
-import "poolz-helper/contracts/ETHHelper.sol";
-import "poolz-helper/contracts/GovManager.sol";
-import "openzeppelin-solidity/contracts/utils/Pausable.sol";
+import "poolz-helper-v2/contracts/ERC20Helper.sol";
+import "poolz-helper-v2/contracts/ERC721Helper.sol";
+import "poolz-helper-v2/contracts/ETHHelper.sol";
+import "poolz-helper-v2/contracts/GovManager.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
 contract Manageable is
     ETHHelper,
@@ -15,15 +15,24 @@ contract Manageable is
     Pausable,
     ERC721Helper
 {
-    uint256 public Fee;
+    uint256 public Fee; // fee to create new pool
+    uint256 public WhiteListFee; // fee to activate whitelist
     address public FeeToken;
     uint256 public Reserve;
 
-    function setFee(address _token, uint256 _amount) external onlyOwnerOrGov {
-        if (Reserve > 0) {
-            WithdrawFee(msg.sender); // If the admin tries to set a new token without withrowing the old one
-        }
+    function SetFee(address _token, uint256 _amount) external onlyOwnerOrGov {
+        SetFeeToken(_token);
         Fee = _amount;
+    }
+
+    function SetWhiteListFee(uint256 _amount) external onlyOwnerOrGov {
+        WhiteListFee = _amount;
+    }
+
+    function SetFeeToken(address _token) public onlyOwnerOrGov {
+        if (Reserve > 0) {
+            WithdrawFee(payable(msg.sender)); // If the admin tries to set a new token without withrowing the old one
+        }
         FeeToken = _token; // set address(0) to use ETH/BNB as main coin
     }
 
@@ -61,11 +70,11 @@ contract Manageable is
         SetApproveForAllNFT(_token, _to, _approve);
     }
 
-    function pause() external onlyOwnerOrGov {
+    function Pause() external onlyOwnerOrGov {
         _pause();
     }
 
-    function unpause() external onlyOwnerOrGov {
+    function Unpause() external onlyOwnerOrGov {
         _unpause();
     }
 }

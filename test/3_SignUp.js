@@ -1,11 +1,10 @@
 const SignUp = artifacts.require("SignUpPool");
 const { assert } = require('chai');
 const truffleAssert = require('truffle-assertions');
-const TestToken = artifacts.require("Token");
-const TestNFT = artifacts.require("MyNFT")
+const TestToken = artifacts.require("ERC20Token");
+const TestNFT = artifacts.require("ERC721Token")
 const BigNumber = require("bignumber.js")
-const constants = require('@openzeppelin/test-helpers/src/constants.js');
-
+const constants = require('@openzeppelin/test-helpers/src/constants.js')
 
 contract("Sign Up flow", accounts => {
     let instance, Token, NFT, poolId, poolId2, ownerAddress = accounts[0], user1 = accounts[1]
@@ -13,7 +12,7 @@ contract("Sign Up flow", accounts => {
     let feePrice = "5";
 
     before(async () => {
-        instance = await SignUp.new()
+        instance = await SignUp.new(constants.ZERO_ADDRESS)
         Token = await TestToken.new('TestToken', 'TEST');
         NFT = await TestNFT.new()
         const tx = await instance.CreateNewPool(constants.ZERO_ADDRESS, price, { from: accounts[6] })
@@ -34,7 +33,7 @@ contract("Sign Up flow", accounts => {
         const fee = web3.utils.toWei('0.001', 'ether')
 
         before(async () => {
-            await instance.setFee(constants.ZERO_ADDRESS, fee, { from: ownerAddress })
+            await instance.SetFee(constants.ZERO_ADDRESS, fee, { from: ownerAddress })
         })
 
         it('should sign up paying Fee in ETH', async () => {
@@ -49,13 +48,9 @@ contract("Sign Up flow", accounts => {
             const tx = await instance.CreateNewPool(constants.ZERO_ADDRESS, fee, { from: accounts[9], value: fee })
             poolId = tx.logs[0].args.PoolId
             const oldBal = new BigNumber((await web3.eth.getBalance(accounts[9])))
-
-            const txnReceipt = await instance.WithdrawFee(accounts[9], { from: ownerAddress })
-            const rcpt = await web3.eth.getTransaction(txnReceipt.tx)
-            const gasPrice = rcpt.gasPrice
+            await instance.WithdrawFee(accounts[9], { from: ownerAddress })
             const actualBalance = new BigNumber((await web3.eth.getBalance(accounts[9])))
             const expectedBalance = BigNumber.sum(oldBal, fee)
-
             assert.equal(actualBalance.toString(), expectedBalance.toString())
         })
 
@@ -72,10 +67,10 @@ contract("Sign Up flow", accounts => {
 
     describe('Signing Up with ERC20', () => {
         const fee = '1000'
-        let poolId3;
+        let poolId3
 
         before(async () => {
-            await instance.setFee(Token.address, fee, { from: ownerAddress })
+            await instance.SetFee(Token.address, fee, { from: ownerAddress })
             await Token.transfer(accounts[3], fee, { from: ownerAddress })
             await Token.approve(instance.address, fee, { from: accounts[3] })
             const tx = await instance.CreateNewPool(Token.address, fee, { from: accounts[3] })
@@ -118,9 +113,8 @@ contract("Sign Up flow", accounts => {
         })
 
         it('should withdraw if reserve greatter than zero', async () => {
-            const fee = 1000           
-            const oldOldBal = await Token.balanceOf(ownerAddress)
-            await instance.setFee(Token.address, fee, { from: ownerAddress })
+            const fee = 1000
+            await instance.SetFee(Token.address, fee, { from: ownerAddress })
             await Token.approve(instance.address, fee, { from: accounts[5] })
             await Token.transfer(accounts[5], fee, { from: ownerAddress })
             const tx = await instance.CreateNewPool(Token.address, fee, { from: accounts[5] })
@@ -130,7 +124,7 @@ contract("Sign Up flow", accounts => {
             const nextBal = await Token.balanceOf(ownerAddress)
             await Token.approve(instance.address, fee, { from: accounts[4] })
             await instance.SignUp(poolId, { from: accounts[4] })
-            await instance.setFee(Token.address, fee, { from: ownerAddress })
+            await instance.SetFee(Token.address, fee, { from: ownerAddress })
             const actualBalance = await Token.balanceOf(ownerAddress)
             assert.equal(oldBal.toNumber(), (nextBal.toNumber() + fee))
             assert.equal(oldBal.toNumber(), (await Token.totalSupply() - fee * 3).toString(), 'invalid balance')
@@ -181,6 +175,5 @@ contract("Sign Up flow", accounts => {
             assert.equal(tid, tokenId)
             assert.equal(nftOnwer, instance.address)
         })
-
     })
 })

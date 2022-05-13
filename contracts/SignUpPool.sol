@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.0;
+pragma solidity ^0.8.0;
 
 import "./PoolControl.sol";
+import "temp-whitelist/contracts/WhiteList.sol";
 
 contract SignUpPool is PoolControl {
     event NewSignUp(uint256 PoolId, address UserAddress);
@@ -21,6 +22,14 @@ contract SignUpPool is PoolControl {
         _;
     }
 
+    constructor(address _whiteListAddr) {
+        if (isContract(_whiteListAddr)) {
+            WhiteListAddress = _whiteListAddr;
+        } else {
+            WhiteListAddress = address(new WhiteList());
+        }
+    }
+
     function SignUp(uint256 _poolId)
         external
         payable
@@ -29,8 +38,10 @@ contract SignUpPool is PoolControl {
         validateSender
     {
         Pool storage signUpPool = poolsMap[_poolId];
-        PayFee(signUpPool.FeeToken, signUpPool.Fee);
-        signUpPool.Reserve = SafeMath.add(signUpPool.Reserve, signUpPool.Fee);
+        if (!FreePay(_poolId)) {
+            PayFee(signUpPool.FeeToken, signUpPool.Fee);
+            signUpPool.Reserve += signUpPool.Fee;
+        }
         emit NewSignUp(_poolId, msg.sender);
     }
 
@@ -50,5 +61,12 @@ contract SignUpPool is PoolControl {
             size := extcodesize(_addr)
         }
         return (size > 0);
+    }
+
+    function FreePay(uint256 _poolId) internal view returns (bool) {
+        uint256 WhiteListId = poolsMap[_poolId].WhiteListId;
+        return
+            WhiteListId != 0 &&
+            IWhiteList(WhiteListAddress).Check(msg.sender, WhiteListId) > 0;
     }
 }

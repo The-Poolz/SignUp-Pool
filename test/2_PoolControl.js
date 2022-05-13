@@ -1,7 +1,7 @@
 const SignUp = artifacts.require("SignUpPool");
 const { assert } = require('chai');
 const truffleAssert = require('truffle-assertions');
-const TestToken = artifacts.require("Token");
+const TestToken = artifacts.require("ERC20Token");
 const constants = require('@openzeppelin/test-helpers/src/constants.js');
 const BigNumber = require('bignumber.js');
 
@@ -11,7 +11,7 @@ contract('Pool Control', accounts => {
     const price = '100'
 
     before(async () => {
-        instance = await SignUp.new()
+        instance = await SignUp.new(constants.ZERO_ADDRESS)
         Token = await TestToken.new('TestToken', 'TEST');
     })
 
@@ -20,14 +20,14 @@ contract('Pool Control', accounts => {
         poolId = tx.logs[0].args.PoolId
         const result = await instance.poolsMap(poolId)
         assert.equal(tx.logs[0].event, 'NewPoolCreated')
-        assert.equal(result['status'], true)
+        assert.equal(result['Status'], true)
     })
 
     it('should deactive existing pool', async () => {
         const tx = await instance.DeactivatePool(poolId, { from: ownerAddress })
         const result = await instance.poolsMap(poolId)
         assert.equal(tx.logs[0].event, 'PoolDeactivated')
-        assert.equal(result['status'], false)
+        assert.equal(result['Status'], false)
     })
 
     it('should fail to deactivate when already inactive', async () => {
@@ -39,7 +39,7 @@ contract('Pool Control', accounts => {
         const tx = await instance.ActivatePool(poolId, { from: ownerAddress })
         const result = await instance.poolsMap(poolId)
         assert.equal(tx.logs[0].event, 'PoolActivated')
-        assert.equal(result['status'], true)
+        assert.equal(result['Status'], true)
     })
 
     it('should fail to activate when already active', async () => {

@@ -1,4 +1,4 @@
-const TestToken = artifacts.require("Token");
+const TestToken = artifacts.require("ERC20Token");
 
 module.exports = function (deployer) {
   // if(deployer.network_id === 5777){
