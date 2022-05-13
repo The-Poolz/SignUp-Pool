@@ -3,7 +3,6 @@
 pragma solidity ^0.8.0;
 
 import "./PoolControl.sol";
-import "temp-whitelist/contracts/WhiteList.sol";
 
 contract SignUpPool is PoolControl {
     event NewSignUp(uint256 PoolId, address UserAddress);
@@ -22,12 +21,8 @@ contract SignUpPool is PoolControl {
         _;
     }
 
-    constructor(address _whiteListAddr) {
-        if (isContract(_whiteListAddr)) {
-            WhiteListAddress = _whiteListAddr;
-        } else {
-            WhiteListAddress = address(new WhiteList());
-        }
+    constructor(IWhiteList _whiteListAddr) {
+        WhiteListAddress = _whiteListAddr;
     }
 
     function SignUp(uint256 _poolId)
@@ -67,6 +62,6 @@ contract SignUpPool is PoolControl {
         uint256 WhiteListId = poolsMap[_poolId].WhiteListId;
         return
             WhiteListId != 0 &&
-            IWhiteList(WhiteListAddress).Check(msg.sender, WhiteListId) > 0;
+            WhiteListAddress.Check(msg.sender, WhiteListId) > 0;
     }
 }

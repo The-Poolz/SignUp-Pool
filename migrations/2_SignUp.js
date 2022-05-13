@@ -1,6 +1,7 @@
 const SignUp = artifacts.require("SignUpPool")
-const constants = require('@openzeppelin/test-helpers/src/constants.js')
+const WhiteList = artifacts.require("WhiteList")
 
-module.exports = function (deployer) {
-  deployer.deploy(SignUp, constants.ZERO_ADDRESS)
+module.exports = async function (deployer) {
+  await deployer.deploy(WhiteList)
+  await deployer.deploy(SignUp, WhiteList.address)
 }

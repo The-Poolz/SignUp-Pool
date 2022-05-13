@@ -5,15 +5,18 @@ const TestToken = artifacts.require("ERC20Token");
 const TestNFT = artifacts.require("ERC721Token")
 const BigNumber = require("bignumber.js")
 const constants = require('@openzeppelin/test-helpers/src/constants.js')
+const WhiteList = artifacts.require("WhiteList")
 
 contract("WhiteList", accounts => {
     let instance, Token, NFT, poolId, ownerAddress = accounts[0], user = accounts[1]
     let whiteListId
+    let whiteList
     const fee = '1000'
     const poolOwner = accounts[6]
 
     before(async () => {
-        instance = await SignUp.new(constants.ZERO_ADDRESS)
+        whiteList = await WhiteList.new()
+        instance = await SignUp.new(whiteList.address)
         Token = await TestToken.new('TestToken', 'TEST')
         NFT = await TestNFT.new()
         await instance.SetFee(constants.ZERO_ADDRESS, fee, { from: ownerAddress })

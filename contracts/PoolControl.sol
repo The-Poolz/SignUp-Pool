@@ -16,7 +16,7 @@ contract PoolControl is Manageable {
     event PoolDeactivated(uint256 PoolId);
     event WhiteListActivated(uint256 PoolId, uint256 WhiteListId);
 
-    address public WhiteListAddress;
+    IWhiteList public WhiteListAddress;
     mapping(uint256 => Pool) public poolsMap;
     uint256 public PoolsCount;
 
@@ -130,7 +130,7 @@ contract PoolControl is Manageable {
         for (uint256 i = 0; i < _users.length; i++) {
             amounts[i] = 42;
         }
-        IWhiteList(WhiteListAddress).AddAddress(
+        WhiteListAddress.AddAddress(
             poolsMap[_poolId].WhiteListId,
             _users,
             amounts
@@ -141,15 +141,14 @@ contract PoolControl is Manageable {
         external
         whiteListStatus(_poolId, true)
     {
-        IWhiteList(WhiteListAddress).RemoveAddress(
-            poolsMap[_poolId].WhiteListId,
-            _users
-        );
+        WhiteListAddress.RemoveAddress(poolsMap[_poolId].WhiteListId, _users);
     }
 
     function CreateManualWhiteList() internal returns (uint256) {
-        uint256 whitelistId = IWhiteList(WhiteListAddress)
-            .CreateManualWhiteList(type(uint256).max, address(this));
+        uint256 whitelistId = WhiteListAddress.CreateManualWhiteList(
+            type(uint256).max,
+            address(this)
+        );
         return whitelistId;
     }
 }
