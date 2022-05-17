@@ -3,12 +3,12 @@ dist: xenial
 language: node_js
 node_js: "16.13.1"
 install: 
-    - apt-get update
-    - apt install software-properties-common
-    - add-apt-repository ppa:deadsnakes/ppa
-    - add-apt-repository ppa:jonathonf/python-3.7
-    - apt-get update
-    - apt-get install python3.7
+    - sudo apt-get update -y
+    - sudo apt install software-properties-common -y
+    - sudo add-apt-repository ppa:deadsnakes/ppa -y
+    - sudo add-apt-repository ppa:jonathonf/python-3.7 -y
+    - sudo apt-get update -y
+    - sudo apt-get install python3.7 -y
     - npm i && npm i -g truffle 
 script: truffle run coverage
 after_script: bash <(curl -s https://codecov.io/bash)
