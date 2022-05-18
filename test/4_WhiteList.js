@@ -20,7 +20,6 @@ contract("WhiteList", accounts => {
         Token = await TestToken.new('TestToken', 'TEST')
         NFT = await TestNFT.new()
         await instance.SetFee(constants.ZERO_ADDRESS, fee, { from: ownerAddress })
-        await instance.SetWhiteListFee(fee)
     })
 
     it('should activate whitelist', async () => {
@@ -31,24 +30,5 @@ contract("WhiteList", accounts => {
         whiteListId = result.logs[0].args.WhiteListId.toString()
         assert.equal(result.logs[0].args.PoolId.toString(), poolId, 'invalid poolId')
         assert.equal(whiteListId, expectedId, 'Invalid WhiteList Id')
-    })
-
-    it('should withdraw whitelist fee', async () => {
-        const receiverAddr = accounts[2]
-        const oldBal = new BigNumber((await web3.eth.getBalance(receiverAddr)))
-        await instance.WithdrawFee(receiverAddr, { from: ownerAddress })
-        const actualBalance = new BigNumber((await web3.eth.getBalance(receiverAddr)))
-        assert.equal(actualBalance.toString(), BigNumber.sum(oldBal, fee * 2).toString(), 'wrong withraw amount')
-    })
-
-    it('should free to pay', async () => {
-        const accountsArray = [user, accounts[2]]
-        const notWhiteListed = accounts[7]
-        await instance.AddAddress(poolId, accountsArray, { from: poolOwner })
-        await instance.SignUp(poolId, { from: user })
-        await truffleAssert.reverts(instance.SignUp(poolId, { from: notWhiteListed }), "Not Enough Fee Provided")
-        await instance.RemoveAddress(poolId, accountsArray, { from: poolOwner })
-        await truffleAssert.reverts(instance.SignUp(poolId, { from: notWhiteListed }), "Not Enough Fee Provided")
-        await truffleAssert.reverts(instance.WithdrawPoolFee(poolId, { from: poolOwner }), "Fee amount is zero")
     })
 })

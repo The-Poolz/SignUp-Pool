@@ -27,7 +27,6 @@ contract PoolControl is Manageable {
         uint256 Reserve; // Reserve of fee
         bool Status; // is pool active
         uint256 WhiteListId;
-        bool WhiteListStatus; // is whitelist active
     }
 
     modifier validatePoolId(uint256 _poolId) {
@@ -45,11 +44,8 @@ contract PoolControl is Manageable {
         _;
     }
 
-    modifier whiteListStatus(uint256 _poolId, bool _status) {
-        require(
-            poolsMap[_poolId].WhiteListStatus == _status,
-            "Invalid WhiteList status"
-        );
+    modifier whiteListStatus(uint256 _poolId) {
+        require(poolsMap[_poolId].WhiteListId == 0, "Invalid WhiteList status");
         _;
     }
 
@@ -113,35 +109,10 @@ contract PoolControl is Manageable {
         public
         payable
         onlyPoolOwner(_poolId)
-        whiteListStatus(_poolId, false)
+        whiteListStatus(_poolId)
     {
-        PayFee(FeeToken, WhiteListFee);
-        Reserve += WhiteListFee;
-        poolsMap[_poolId].WhiteListStatus = true;
         poolsMap[_poolId].WhiteListId = CreateManualWhiteList();
         emit WhiteListActivated(_poolId, poolsMap[_poolId].WhiteListId);
-    }
-
-    function AddAddress(uint256 _poolId, address[] calldata _users)
-        public
-        whiteListStatus(_poolId, true)
-    {
-        uint256[] memory amounts = new uint256[](_users.length);
-        for (uint256 i = 0; i < _users.length; i++) {
-            amounts[i] = 42;
-        }
-        WhiteListAddress.AddAddress(
-            poolsMap[_poolId].WhiteListId,
-            _users,
-            amounts
-        );
-    }
-
-    function RemoveAddress(uint256 _poolId, address[] calldata _users)
-        external
-        whiteListStatus(_poolId, true)
-    {
-        WhiteListAddress.RemoveAddress(poolsMap[_poolId].WhiteListId, _users);
     }
 
     function CreateManualWhiteList() internal returns (uint256) {
