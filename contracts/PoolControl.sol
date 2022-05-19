@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.0;
+pragma solidity ^0.8.0;
 
 import "./Manageable.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "poolz-helper-v2/contracts/interfaces/IWhiteList.sol";
 
 contract PoolControl is Manageable {
     event NewPoolCreated(
@@ -14,7 +14,9 @@ contract PoolControl is Manageable {
     );
     event PoolActivated(uint256 PoolId);
     event PoolDeactivated(uint256 PoolId);
+    event WhiteListActivated(uint256 PoolId, uint256 WhiteListId);
 
+    IWhiteList public WhiteListAddress;
     mapping(uint256 => Pool) public poolsMap;
     uint256 public PoolsCount;
 
@@ -23,7 +25,8 @@ contract PoolControl is Manageable {
         address FeeToken; // Which token will be used
         uint256 Fee; // The pool fee
         uint256 Reserve; // Reserve of fee
-        bool status; // is pool active
+        bool Status; // is pool active
+        uint256 WhiteListId;
     }
 
     modifier validatePoolId(uint256 _poolId) {
@@ -37,7 +40,17 @@ contract PoolControl is Manageable {
     }
 
     modifier validateStatus(uint256 _poolId, bool _status) {
-        require(poolsMap[_poolId].status == _status, "Invalid pool status");
+        require(poolsMap[_poolId].Status == _status, "Invalid pool status");
+        _;
+    }
+
+    modifier whiteListStatus(uint256 _poolId, bool _status) {
+        require(
+            _status
+                ? poolsMap[_poolId].WhiteListId != 0
+                : poolsMap[_poolId].WhiteListId == 0,
+            "Invalid WhiteList status"
+        );
         _;
     }
 
@@ -54,13 +67,18 @@ contract PoolControl is Manageable {
     function CreateNewPool(address _token, uint256 _price) external payable {
         PayFee(FeeToken, Fee);
         Pool storage newPool = poolsMap[PoolsCount];
-        newPool.status = true;
-        newPool.Owner = msg.sender;
+        newPool.Status = true;
+        newPool.Owner = payable(msg.sender);
         newPool.FeeToken = _token;
         newPool.Fee = _price;
-        Reserve = SafeMath.add(Reserve, Fee);
-        emit NewPoolCreated(PoolsCount, msg.sender, newPool.FeeToken, newPool.Fee);
-        PoolsCount = SafeMath.add(PoolsCount, 1);
+        Reserve += Fee;
+        emit NewPoolCreated(
+            PoolsCount,
+            newPool.Owner,
+            newPool.FeeToken,
+            newPool.Fee
+        );
+        ++PoolsCount;
     }
 
     function ActivatePool(uint256 _poolId)
@@ -69,7 +87,7 @@ contract PoolControl is Manageable {
         onlyPoolOwner(_poolId)
         validateStatus(_poolId, false)
     {
-        poolsMap[_poolId].status = true;
+        poolsMap[_poolId].Status = true;
         emit PoolActivated(_poolId);
     }
 
@@ -79,7 +97,7 @@ contract PoolControl is Manageable {
         onlyPoolOwner(_poolId)
         validateStatus(_poolId, true)
     {
-        poolsMap[_poolId].status = false;
+        poolsMap[_poolId].Status = false;
         emit PoolDeactivated(_poolId);
     }
 
@@ -90,5 +108,24 @@ contract PoolControl is Manageable {
             poolsMap[_poolId].Reserve
         );
         poolsMap[_poolId].Reserve = 0;
+    }
+
+    function ActivateWhiteList(uint256 _poolId)
+        public
+        payable
+        onlyPoolOwner(_poolId)
+        whiteListStatus(_poolId, false)
+    {
+        poolsMap[_poolId].WhiteListId = CreateManualWhiteList();
+        emit WhiteListActivated(_poolId, poolsMap[_poolId].WhiteListId);
+    }
+
+    function CreateManualWhiteList() internal returns (uint256) {
+        uint256 whitelistId = WhiteListAddress.CreateManualWhiteList(
+            type(uint256).max,
+            address(this)
+        );
+        WhiteListAddress.ChangeCreator(whitelistId, _msgSender());
+        return whitelistId;
     }
 }

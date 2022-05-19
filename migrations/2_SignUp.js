@@ -1,5 +1,7 @@
-const SignUp = artifacts.require("SignUpPool");
+const SignUp = artifacts.require("SignUpPool")
+const WhiteList = artifacts.require("WhiteList")
 
-module.exports = function (deployer) {
-  deployer.deploy(SignUp);
-};
+module.exports = async function (deployer) {
+  await deployer.deploy(WhiteList)
+  await deployer.deploy(SignUp, WhiteList.address)
+}

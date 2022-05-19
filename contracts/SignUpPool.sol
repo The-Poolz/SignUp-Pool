@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.0;
+pragma solidity ^0.8.0;
 
 import "./PoolControl.sol";
 
@@ -21,6 +21,18 @@ contract SignUpPool is PoolControl {
         _;
     }
 
+    modifier isWhiteListExist(IWhiteList _whiteListAddr) {
+        require(
+            address(_whiteListAddr) != address(0),
+            "whiteList is zero address"
+        );
+        _;
+    }
+
+    constructor(IWhiteList _whiteListAddr) isWhiteListExist(_whiteListAddr) {
+        WhiteListAddress = _whiteListAddr;
+    }
+
     function SignUp(uint256 _poolId)
         external
         payable
@@ -29,8 +41,18 @@ contract SignUpPool is PoolControl {
         validateSender
     {
         Pool storage signUpPool = poolsMap[_poolId];
-        PayFee(signUpPool.FeeToken, signUpPool.Fee);
-        signUpPool.Reserve = SafeMath.add(signUpPool.Reserve, signUpPool.Fee);
+        uint256 feeAmount;
+        if (signUpPool.WhiteListId == 0) {
+            // if the whitelist is not activated
+            PayFee(signUpPool.FeeToken, signUpPool.Fee);
+            feeAmount = signUpPool.Fee;
+        } else {
+            feeAmount = CalcFee(_poolId);
+            if (feeAmount > 0) {
+                PayFee(signUpPool.FeeToken, feeAmount);
+            }
+        }
+        signUpPool.Reserve += feeAmount;
         emit NewSignUp(_poolId, msg.sender);
     }
 
@@ -50,5 +72,21 @@ contract SignUpPool is PoolControl {
             size := extcodesize(_addr)
         }
         return (size > 0);
+    }
+
+    function CalcFee(uint256 _poolId)
+        internal
+        whiteListStatus(_poolId, true)
+        returns (uint256)
+    {
+        Pool storage signUpPool = poolsMap[_poolId];
+        uint256 WhiteListId = signUpPool.WhiteListId;
+        uint256 discount = WhiteListAddress.Check(msg.sender, WhiteListId);
+        if (discount >= signUpPool.Fee) {
+            WhiteListAddress.Register(msg.sender, WhiteListId, signUpPool.Fee);
+            return 0;
+        }
+        WhiteListAddress.Register(msg.sender, WhiteListId, discount);
+        return signUpPool.Fee - discount;
     }
 }
