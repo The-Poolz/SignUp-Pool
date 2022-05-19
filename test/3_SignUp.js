@@ -1,19 +1,19 @@
-const SignUp = artifacts.require("SignUpPool");
-const { assert } = require('chai');
-const truffleAssert = require('truffle-assertions');
-const TestToken = artifacts.require("ERC20Token");
+const SignUp = artifacts.require("SignUpPool")
+const { assert } = require('chai')
+const truffleAssert = require('truffle-assertions')
+const TestToken = artifacts.require("ERC20Token")
 const TestNFT = artifacts.require("ERC721Token")
 const BigNumber = require("bignumber.js")
 const constants = require('@openzeppelin/test-helpers/src/constants.js')
 
 contract("Sign Up flow", accounts => {
     let instance, Token, NFT, poolId, poolId2, ownerAddress = accounts[0], user1 = accounts[1]
-    const price = '0';
-    let feePrice = "5";
+    const price = '0', whiteList = accounts[7]
+    let feePrice = "5"
 
     before(async () => {
-        instance = await SignUp.new(constants.ZERO_ADDRESS)
-        Token = await TestToken.new('TestToken', 'TEST');
+        instance = await SignUp.new(whiteList)
+        Token = await TestToken.new('TestToken', 'TEST')
         NFT = await TestNFT.new()
         const tx = await instance.CreateNewPool(constants.ZERO_ADDRESS, price, { from: accounts[6] })
         const tx2 = await instance.CreateNewPool(constants.ZERO_ADDRESS, feePrice, { from: accounts[6] })

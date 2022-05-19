@@ -1,18 +1,19 @@
-const SignUp = artifacts.require("SignUpPool");
-const { assert } = require('chai');
-const truffleAssert = require('truffle-assertions');
-const TestToken = artifacts.require("ERC20Token");
-const constants = require('@openzeppelin/test-helpers/src/constants.js');
-const BigNumber = require('bignumber.js');
+const SignUp = artifacts.require("SignUpPool")
+const { assert } = require('chai')
+const truffleAssert = require('truffle-assertions')
+const TestToken = artifacts.require("ERC20Token")
+const constants = require('@openzeppelin/test-helpers/src/constants.js')
+const BigNumber = require('bignumber.js')
 
 contract('Pool Control', accounts => {
     let instance, Token, poolId
     const ownerAddress = accounts[0], investor = accounts[2]
     const price = '100'
+    const whiteList = accounts[7]
 
     before(async () => {
-        instance = await SignUp.new(constants.ZERO_ADDRESS)
-        Token = await TestToken.new('TestToken', 'TEST');
+        instance = await SignUp.new(whiteList)
+        Token = await TestToken.new('TestToken', 'TEST')
     })
 
     it('should activate a new pool', async () => {

@@ -120,6 +120,7 @@ contract PoolControl is Manageable {
             type(uint256).max,
             address(this)
         );
+        WhiteListAddress.ChangeCreator(whitelistId, _msgSender());
         return whitelistId;
     }
 }

@@ -21,7 +21,15 @@ contract SignUpPool is PoolControl {
         _;
     }
 
-    constructor(IWhiteList _whiteListAddr) {
+    modifier isWhiteListExist(IWhiteList _whiteListAddr) {
+        require(
+            address(_whiteListAddr) != address(0),
+            "whiteList is zero address"
+        );
+        _;
+    }
+
+    constructor(IWhiteList _whiteListAddr) isWhiteListExist(_whiteListAddr) {
         WhiteListAddress = _whiteListAddr;
     }
 
@@ -33,10 +41,17 @@ contract SignUpPool is PoolControl {
         validateSender
     {
         Pool storage signUpPool = poolsMap[_poolId];
-        if (!FreePay(_poolId)) {
+        uint256 feeAmount;
+        if (signUpPool.WhiteListId == 0) {
             PayFee(signUpPool.FeeToken, signUpPool.Fee);
-            signUpPool.Reserve += signUpPool.Fee;
+            feeAmount = signUpPool.Fee;
+        } else {
+            feeAmount = CalcFee(_poolId);
+            if (feeAmount > 0) {
+                PayFee(signUpPool.FeeToken, feeAmount);
+            }
         }
+        signUpPool.Reserve += feeAmount;
         emit NewSignUp(_poolId, msg.sender);
     }
 
@@ -58,10 +73,15 @@ contract SignUpPool is PoolControl {
         return (size > 0);
     }
 
-    function FreePay(uint256 _poolId) internal view returns (bool) {
-        uint256 WhiteListId = poolsMap[_poolId].WhiteListId;
-        return
-            WhiteListId != 0 &&
-            WhiteListAddress.Check(msg.sender, WhiteListId) > 0;
+    function CalcFee(uint256 _poolId) internal returns (uint256) {
+        Pool storage signUpPool = poolsMap[_poolId];
+        uint256 WhiteListId = signUpPool.WhiteListId;
+        uint256 discount = WhiteListAddress.Check(msg.sender, WhiteListId);
+        if (discount >= signUpPool.Fee) {
+            WhiteListAddress.Register(msg.sender, WhiteListId, signUpPool.Fee);
+            return 0;
+        }
+        WhiteListAddress.Register(msg.sender, WhiteListId, discount);
+        return signUpPool.Fee - discount;
     }
 }
