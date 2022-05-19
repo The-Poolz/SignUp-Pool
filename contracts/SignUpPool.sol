@@ -43,6 +43,7 @@ contract SignUpPool is PoolControl {
         Pool storage signUpPool = poolsMap[_poolId];
         uint256 feeAmount;
         if (signUpPool.WhiteListId == 0) {
+            // if the whitelist is not activated
             PayFee(signUpPool.FeeToken, signUpPool.Fee);
             feeAmount = signUpPool.Fee;
         } else {
@@ -73,7 +74,11 @@ contract SignUpPool is PoolControl {
         return (size > 0);
     }
 
-    function CalcFee(uint256 _poolId) internal returns (uint256) {
+    function CalcFee(uint256 _poolId)
+        internal
+        whiteListStatus(_poolId, true)
+        returns (uint256)
+    {
         Pool storage signUpPool = poolsMap[_poolId];
         uint256 WhiteListId = signUpPool.WhiteListId;
         uint256 discount = WhiteListAddress.Check(msg.sender, WhiteListId);
