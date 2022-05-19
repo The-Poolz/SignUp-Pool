@@ -6,9 +6,10 @@ const constants = require('@openzeppelin/test-helpers/src/constants.js');
 
 contract('Admin Settings', accounts => {
     let instance, Token, NFT, ownerAddress = accounts[0]
+    const whiteList = accounts[7]
 
     before(async () => {
-        instance = await SignUp.new(constants.ZERO_ADDRESS)
+        instance = await SignUp.new(whiteList)
         NFT = await TestNFT.new()
         Token = await TestToken.new('TestToken', 'TEST');
     })

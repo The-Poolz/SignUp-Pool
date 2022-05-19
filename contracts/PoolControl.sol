@@ -44,8 +44,13 @@ contract PoolControl is Manageable {
         _;
     }
 
-    modifier whiteListStatus(uint256 _poolId) {
-        require(poolsMap[_poolId].WhiteListId == 0, "Invalid WhiteList status");
+    modifier whiteListStatus(uint256 _poolId, bool _status) {
+        require(
+            _status
+                ? poolsMap[_poolId].WhiteListId != 0
+                : poolsMap[_poolId].WhiteListId == 0,
+            "Invalid WhiteList status"
+        );
         _;
     }
 
@@ -109,7 +114,7 @@ contract PoolControl is Manageable {
         public
         payable
         onlyPoolOwner(_poolId)
-        whiteListStatus(_poolId)
+        whiteListStatus(_poolId, false)
     {
         poolsMap[_poolId].WhiteListId = CreateManualWhiteList();
         emit WhiteListActivated(_poolId, poolsMap[_poolId].WhiteListId);
@@ -120,6 +125,7 @@ contract PoolControl is Manageable {
             type(uint256).max,
             address(this)
         );
+        WhiteListAddress.ChangeCreator(whitelistId, _msgSender());
         return whitelistId;
     }
 }
