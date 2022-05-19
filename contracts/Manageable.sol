@@ -16,17 +16,12 @@ contract Manageable is
     ERC721Helper
 {
     uint256 public Fee; // fee to create new pool
-    uint256 public WhiteListFee; // fee to activate whitelist
     address public FeeToken;
     uint256 public Reserve;
 
     function SetFee(address _token, uint256 _amount) external onlyOwnerOrGov {
         SetFeeToken(_token);
         Fee = _amount;
-    }
-
-    function SetWhiteListFee(uint256 _amount) external onlyOwnerOrGov {
-        WhiteListFee = _amount;
     }
 
     function SetFeeToken(address _token) public onlyOwnerOrGov {
