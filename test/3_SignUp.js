@@ -112,22 +112,21 @@ contract("Sign Up flow", accounts => {
             assert.equal(address, accounts[6])
         })
 
-        it('should withdraw if reserve greatter than zero', async () => {
+        it('should withdraw if token will be switched', async () => {
             const fee = 1000
             await instance.SetFee(Token.address, fee, { from: ownerAddress })
             await Token.approve(instance.address, fee, { from: accounts[5] })
             await Token.transfer(accounts[5], fee, { from: ownerAddress })
             const tx = await instance.CreateNewPool(Token.address, fee, { from: accounts[5] })
             poolId = tx.logs[1].args.PoolId
-            const oldBal = await Token.balanceOf(ownerAddress)
             await Token.transfer(accounts[4], fee, { from: ownerAddress })
-            const nextBal = await Token.balanceOf(ownerAddress)
             await Token.approve(instance.address, fee, { from: accounts[4] })
             await instance.SignUp(poolId, { from: accounts[4] })
-            await instance.SetFee(Token.address, fee, { from: ownerAddress })
+            const oldBal = await Token.balanceOf(ownerAddress)
+            assert.equal(oldBal.toNumber(), (await Token.totalSupply() - fee * 5).toString(), 'invalid balance')
+            await instance.SetFee(constants.ZERO_ADDRESS, fee, { from: ownerAddress })
             const actualBalance = await Token.balanceOf(ownerAddress)
-            assert.equal(oldBal.toNumber(), (nextBal.toNumber() + fee))
-            assert.equal(oldBal.toNumber(), (await Token.totalSupply() - fee * 3).toString(), 'invalid balance')
+            // -5 transfers + 3 createNewPool - Withdraw to another address
             assert.equal(actualBalance.toNumber(), (await Token.totalSupply() - fee * 3).toString(), 'invalid balance')
         })
     })

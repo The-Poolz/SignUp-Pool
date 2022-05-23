@@ -54,24 +54,13 @@ contract PoolControl is Manageable {
         _;
     }
 
-    function PayFee(address _token, uint256 _fee) internal {
-        if (_fee > 0) {
-            if (_token == address(0)) {
-                require(msg.value >= _fee, "Not Enough Fee Provided");
-            } else {
-                TransferInToken(_token, msg.sender, _fee);
-            }
-        }
-    }
-
     function CreateNewPool(address _token, uint256 _price) external payable {
-        PayFee(FeeToken, Fee);
+        PayFee();
         Pool storage newPool = poolsMap[PoolsCount];
         newPool.Status = true;
         newPool.Owner = payable(msg.sender);
         newPool.FeeToken = _token;
         newPool.Fee = _price;
-        Reserve += Fee;
         emit NewPoolCreated(
             PoolsCount,
             newPool.Owner,
