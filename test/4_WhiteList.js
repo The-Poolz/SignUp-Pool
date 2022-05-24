@@ -22,7 +22,7 @@ contract("WhiteList", accounts => {
         instance = await SignUp.new(whiteList.address)
         Token = await TestToken.new('TestToken', 'TEST')
         NFT = await TestNFT.new()
-        await instance.SetFee(constants.ZERO_ADDRESS, fee, { from: ownerAddress })
+        await instance.SetFee(fee, { from: ownerAddress })
     })
 
     it('should activate whitelist', async () => {

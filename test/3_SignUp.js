@@ -1,4 +1,5 @@
 const SignUp = artifacts.require("SignUpPool")
+const FeeBaseHelper = artifacts.require("FeeBaseHelper")
 const { assert } = require('chai')
 const truffleAssert = require('truffle-assertions')
 const TestToken = artifacts.require("ERC20Token")
@@ -9,7 +10,7 @@ const constants = require('@openzeppelin/test-helpers/src/constants.js')
 contract("Sign Up flow", accounts => {
     let instance, Token, NFT, poolId, poolId2, ownerAddress = accounts[0], user1 = accounts[1]
     const price = '0', whiteList = accounts[7]
-    let feePrice = "5"
+    let feePrice = "5", feeBase
 
     before(async () => {
         instance = await SignUp.new(whiteList)
@@ -33,7 +34,7 @@ contract("Sign Up flow", accounts => {
         const fee = web3.utils.toWei('0.001', 'ether')
 
         before(async () => {
-            await instance.SetFee(constants.ZERO_ADDRESS, fee, { from: ownerAddress })
+            await instance.SetFee(fee, { from: ownerAddress })
         })
 
         it('should sign up paying Fee in ETH', async () => {
@@ -70,19 +71,22 @@ contract("Sign Up flow", accounts => {
         let poolId3
 
         before(async () => {
-            await instance.SetFee(Token.address, fee, { from: ownerAddress })
+            await instance.SetFee(fee, { from: ownerAddress })
+            await instance.SetToken(Token.address, { from: ownerAddress })
             await Token.transfer(accounts[3], fee, { from: ownerAddress })
-            await Token.approve(instance.address, fee, { from: accounts[3] })
+            const baseFee = await instance.BaseFee()
+            await Token.approve(baseFee, fee, { from: accounts[3] })
             const tx = await instance.CreateNewPool(Token.address, fee, { from: accounts[3] })
-            poolId3 = tx.logs[1].args.PoolId
+            poolId3 = tx.logs[0].args.PoolId
         })
 
         it('should sign up paying Fee in ERC20', async () => {
+            const result = await instance.poolsMap(poolId3)
             await Token.transfer(accounts[4], fee, { from: ownerAddress })
-            await Token.approve(instance.address, fee, { from: accounts[4] })
+            await Token.approve(result['BaseFee'], fee, { from: accounts[4] })
             const tx = await instance.SignUp(poolId3, { from: accounts[4] })
-            const pid = tx.logs[1].args.PoolId
-            const address = tx.logs[1].args.UserAddress
+            const pid = tx.logs[0].args.PoolId
+            const address = tx.logs[0].args.UserAddress
             assert.equal(pid.toNumber(), poolId3.toNumber())
             assert.equal(address, accounts[4])
         })
@@ -94,7 +98,9 @@ contract("Sign Up flow", accounts => {
 
         it('withdrawing ERC20 Fee', async () => {
             const oldBal = await Token.balanceOf(accounts[9])
-            const feeBal = await instance.Reserve()
+            const feeBalAddr = await instance.BaseFee()
+            baseFee = await FeeBaseHelper.at(feeBalAddr)
+            const feeBal = await baseFee.Reserve()
             await instance.WithdrawFee(accounts[9], { from: ownerAddress })
             const newBal = await Token.balanceOf(accounts[9])
             assert.equal((newBal).toNumber(), (oldBal).toNumber() + (feeBal).toNumber())
@@ -102,9 +108,10 @@ contract("Sign Up flow", accounts => {
 
         it('should SignUp when Fee is 0', async () => {
             await Token.transfer(accounts[6], fee, { from: ownerAddress })
-            await Token.approve(instance.address, fee, { from: accounts[6] })
+            const baseFee = await instance.BaseFee()
+            await Token.approve(baseFee, fee, { from: accounts[6] })
             const tx = await instance.CreateNewPool(Token.address, 0, { from: accounts[6] })
-            const poolId = tx.logs[1].args.PoolId
+            const poolId = tx.logs[0].args.PoolId
             const tx2 = await instance.SignUp(poolId, { from: accounts[6] })
             const pid = tx2.logs[0].args.PoolId
             const address = tx2.logs[0].args.UserAddress
@@ -112,22 +119,21 @@ contract("Sign Up flow", accounts => {
             assert.equal(address, accounts[6])
         })
 
-        it('should withdraw if reserve greatter than zero', async () => {
-            const fee = 1000
-            await instance.SetFee(Token.address, fee, { from: ownerAddress })
-            await Token.approve(instance.address, fee, { from: accounts[5] })
+        it('should withdraw if token will be switched', async () => {
+            const baseFee = await instance.BaseFee()
+            await Token.approve(baseFee, fee, { from: accounts[5] })
             await Token.transfer(accounts[5], fee, { from: ownerAddress })
             const tx = await instance.CreateNewPool(Token.address, fee, { from: accounts[5] })
-            poolId = tx.logs[1].args.PoolId
-            const oldBal = await Token.balanceOf(ownerAddress)
+            poolId = tx.logs[0].args.PoolId
+            const result = await instance.poolsMap(poolId)
             await Token.transfer(accounts[4], fee, { from: ownerAddress })
-            const nextBal = await Token.balanceOf(ownerAddress)
-            await Token.approve(instance.address, fee, { from: accounts[4] })
+            await Token.approve(result['BaseFee'], fee, { from: accounts[4] })
             await instance.SignUp(poolId, { from: accounts[4] })
-            await instance.SetFee(Token.address, fee, { from: ownerAddress })
+            const oldBal = await Token.balanceOf(ownerAddress)
+            assert.equal(oldBal.toNumber(), (await Token.totalSupply() - fee * 5).toString(), 'invalid balance')
+            await instance.SetToken(constants.ZERO_ADDRESS, { from: ownerAddress })
             const actualBalance = await Token.balanceOf(ownerAddress)
-            assert.equal(oldBal.toNumber(), (nextBal.toNumber() + fee))
-            assert.equal(oldBal.toNumber(), (await Token.totalSupply() - fee * 3).toString(), 'invalid balance')
+            // -5 transfers + 3 createNewPool - Withdraw to another address
             assert.equal(actualBalance.toNumber(), (await Token.totalSupply() - fee * 3).toString(), 'invalid balance')
         })
     })

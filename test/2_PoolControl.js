@@ -83,9 +83,10 @@ contract('Pool Control', accounts => {
             const fee = '100000'
             const tx = await instance.CreateNewPool(Token.address, fee, { from: poolOwner })
             poolId = tx.logs[0].args.PoolId
+            const result = await instance.poolsMap(poolId)
             const oldBal = await Token.balanceOf(poolOwner)
             await Token.transfer(investor, fee)
-            await Token.approve(instance.address, fee, { from: investor })
+            await Token.approve(result['BaseFee'], fee, { from: investor })
             await instance.SignUp(poolId, { from: investor })
             await instance.WithdrawPoolFee(poolId, { from: poolOwner })
             const actualBalance = await Token.balanceOf(poolOwner)

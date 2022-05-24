@@ -8,7 +8,7 @@
     "babel-register": "^6.23.0",
     "bignumber.js": "^9.0.2",
     "ganache-time-traveler": "^1.0.15",
-    "poolz-helper-v2": "^2.0.3",
+    "poolz-helper-v2": "^2.0.7",
     "temp-whitelist": "^1.0.6",
     "truffle-assertions": "^0.9.2"
   },

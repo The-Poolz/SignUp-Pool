@@ -22,9 +22,7 @@ contract PoolControl is Manageable {
 
     struct Pool {
         address payable Owner; // The pool owner
-        address FeeToken; // Which token will be used
-        uint256 Fee; // The pool fee
-        uint256 Reserve; // Reserve of fee
+        FeeBaseHelper BaseFee;
         bool Status; // is pool active
         uint256 WhiteListId;
     }
@@ -54,29 +52,19 @@ contract PoolControl is Manageable {
         _;
     }
 
-    function PayFee(address _token, uint256 _fee) internal {
-        if (_fee > 0) {
-            if (_token == address(0)) {
-                require(msg.value >= _fee, "Not Enough Fee Provided");
-            } else {
-                TransferInToken(_token, msg.sender, _fee);
-            }
-        }
-    }
-
     function CreateNewPool(address _token, uint256 _price) external payable {
-        PayFee(FeeToken, Fee);
+        PayFee();
         Pool storage newPool = poolsMap[PoolsCount];
+        newPool.BaseFee = new FeeBaseHelper();
         newPool.Status = true;
         newPool.Owner = payable(msg.sender);
-        newPool.FeeToken = _token;
-        newPool.Fee = _price;
-        Reserve += Fee;
+        if (_token != address(0)) newPool.BaseFee.SetFeeToken(_token);
+        if (_price != 0) newPool.BaseFee.SetFeeAmount(_price);
         emit NewPoolCreated(
             PoolsCount,
             newPool.Owner,
-            newPool.FeeToken,
-            newPool.Fee
+            newPool.BaseFee.FeeToken(),
+            newPool.BaseFee.Fee()
         );
         ++PoolsCount;
     }
@@ -102,12 +90,8 @@ contract PoolControl is Manageable {
     }
 
     function WithdrawPoolFee(uint256 _poolId) external onlyPoolOwner(_poolId) {
-        WithdrawFee(
-            poolsMap[_poolId].FeeToken,
-            poolsMap[_poolId].Owner,
-            poolsMap[_poolId].Reserve
-        );
-        poolsMap[_poolId].Reserve = 0;
+        FeeBaseHelper PoolFee = poolsMap[_poolId].BaseFee;
+        PoolFee.WithdrawFee(poolsMap[_poolId].Owner, PoolFee.Reserve());
     }
 
     function ActivateWhiteList(uint256 _poolId)
