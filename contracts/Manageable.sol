@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 
 import "poolz-helper-v2/contracts/ERC721Helper.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "./FeeHelper.sol";
+import "poolz-helper-v2/contracts/FeeHelper.sol";
 
 contract Manageable is FeeHelper, Pausable, ERC721Helper {
     function WithdrawNFT(

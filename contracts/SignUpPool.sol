@@ -44,15 +44,14 @@ contract SignUpPool is PoolControl {
         uint256 feeAmount;
         if (signUpPool.WhiteListId == 0) {
             // if the whitelist is not activated
-            PayFee(signUpPool.FeeToken, signUpPool.Fee);
-            feeAmount = signUpPool.Fee;
+            feeAmount = signUpPool.BaseFee.Fee();
+            signUpPool.BaseFee.PayFee{value: msg.value}(feeAmount);
         } else {
             feeAmount = CalcFee(_poolId);
             if (feeAmount > 0) {
-                PayFee(signUpPool.FeeToken, feeAmount);
+                signUpPool.BaseFee.PayFee{value: msg.value}(feeAmount);
             }
         }
-        signUpPool.Reserve += feeAmount;
         emit NewSignUp(_poolId, msg.sender);
     }
 
@@ -82,11 +81,12 @@ contract SignUpPool is PoolControl {
         Pool storage signUpPool = poolsMap[_poolId];
         uint256 WhiteListId = signUpPool.WhiteListId;
         uint256 discount = WhiteListAddress.Check(msg.sender, WhiteListId);
-        if (discount >= signUpPool.Fee) {
-            WhiteListAddress.Register(msg.sender, WhiteListId, signUpPool.Fee);
+        uint256 fee = signUpPool.BaseFee.Fee();
+        if (discount >= fee) {
+            WhiteListAddress.Register(msg.sender, WhiteListId, fee);
             return 0;
         }
         WhiteListAddress.Register(msg.sender, WhiteListId, discount);
-        return signUpPool.Fee - discount;
+        return fee - discount;
     }
 }
