@@ -22,12 +22,12 @@ contract("WhiteList", accounts => {
         instance = await SignUp.new(whiteList.address)
         Token = await TestToken.new('TestToken', 'TEST')
         NFT = await TestNFT.new()
-        await instance.SetFee(fee, { from: ownerAddress })
+        await instance.SetFeeAmount(fee, { from: ownerAddress })
     })
 
     it('should activate whitelist', async () => {
         const tx = await instance.CreateNewPool(constants.ZERO_ADDRESS, fee, { from: poolOwner, value: fee })
-        poolId = tx.logs[0].args.PoolId.toString()
+        poolId = tx.logs[2].args.PoolId.toString()
         const result = await instance.ActivateWhiteList(poolId, { from: poolOwner, value: fee })
         const expectedId = '1'
         whiteListId = result.logs[0].args.WhiteListId.toString()

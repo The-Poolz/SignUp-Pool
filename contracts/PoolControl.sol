@@ -53,7 +53,7 @@ contract PoolControl is Manageable {
     }
 
     function CreateNewPool(address _token, uint256 _price) external payable {
-        PayFee();
+        PayFee(Fee);
         Pool storage newPool = poolsMap[PoolsCount];
         newPool.BaseFee = new FeeBaseHelper();
         newPool.Status = true;
@@ -91,7 +91,7 @@ contract PoolControl is Manageable {
 
     function WithdrawPoolFee(uint256 _poolId) external onlyPoolOwner(_poolId) {
         FeeBaseHelper PoolFee = poolsMap[_poolId].BaseFee;
-        PoolFee.WithdrawFee(poolsMap[_poolId].Owner, PoolFee.Reserve());
+        PoolFee.WithdrawFee(poolsMap[_poolId].Owner);
     }
 
     function ActivateWhiteList(uint256 _poolId)

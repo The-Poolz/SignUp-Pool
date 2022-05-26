@@ -18,9 +18,9 @@ contract('Pool Control', accounts => {
 
     it('should activate a new pool', async () => {
         const tx = await instance.CreateNewPool(constants.ZERO_ADDRESS, price, { from: ownerAddress })
-        poolId = tx.logs[0].args.PoolId
+        poolId = tx.logs[1].args.PoolId
         const result = await instance.poolsMap(poolId)
-        assert.equal(tx.logs[0].event, 'NewPoolCreated')
+        assert.equal(tx.logs[1].event, 'NewPoolCreated')
         assert.equal(result['Status'], true)
     })
 
@@ -67,7 +67,7 @@ contract('Pool Control', accounts => {
         it('should withdraw pool fee to pool owner when main coin', async () => {
             const fee = new BigNumber(web3.utils.toWei('0.05', 'ether').toString())
             const tx = await instance.CreateNewPool(constants.ZERO_ADDRESS, fee, { from: poolOwner })
-            poolId = tx.logs[0].args.PoolId
+            poolId = tx.logs[1].args.PoolId
             await instance.SignUp(poolId, { from: investor, value: fee }) //
             const oldBal = new BigNumber((await web3.eth.getBalance(poolOwner)))
             const txnReceipt = await instance.WithdrawPoolFee(poolId, { from: poolOwner })
@@ -82,7 +82,7 @@ contract('Pool Control', accounts => {
         it('should withdraw pool fee to pool owner when ERC20', async () => {
             const fee = '100000'
             const tx = await instance.CreateNewPool(Token.address, fee, { from: poolOwner })
-            poolId = tx.logs[0].args.PoolId
+            poolId = tx.logs[1].args.PoolId
             const result = await instance.poolsMap(poolId)
             const oldBal = await Token.balanceOf(poolOwner)
             await Token.transfer(investor, fee)
