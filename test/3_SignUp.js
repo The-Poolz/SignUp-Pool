@@ -44,7 +44,7 @@ contract("Sign Up flow", accounts => {
 
         it('withdrawing ETH Fee', async () => {
             const tx = await instance.CreateNewPool(constants.ZERO_ADDRESS, fee, { from: accounts[9], value: fee })
-            poolId = tx.logs[2].args.PoolId.toString()
+            poolId = tx.logs[tx.logs.length - 1].args.PoolId.toString()
             const oldBal = new BigNumber((await web3.eth.getBalance(accounts[9])))
             await instance.WithdrawFee(accounts[9], { from: ownerAddress })
             const actualBalance = new BigNumber((await web3.eth.getBalance(accounts[9])))
@@ -70,7 +70,7 @@ contract("Sign Up flow", accounts => {
             await Token.transfer(accounts[3], fee, { from: ownerAddress })
             await Token.approve(instance.address, fee, { from: accounts[3] })
             const tx = await instance.CreateNewPool(Token.address, fee, { from: accounts[3] })
-            poolId = tx.logs[2].args.PoolId
+            poolId = tx.logs[tx.logs.length - 1].args.PoolId
         })
 
         it('should sign up paying Fee in ERC20', async () => {
@@ -100,7 +100,7 @@ contract("Sign Up flow", accounts => {
             await Token.transfer(accounts[6], fee, { from: ownerAddress })
             await Token.approve(instance.address, fee, { from: accounts[6] })
             const tx = await instance.CreateNewPool(Token.address, 0, { from: accounts[6] })
-            const poolId = tx.logs[2].args.PoolId
+            const poolId = tx.logs[tx.logs.length - 1].args.PoolId
             const tx2 = await instance.SignUp(poolId, { from: accounts[6] })
             const pid = tx2.logs[0].args.PoolId
             const address = tx2.logs[0].args.UserAddress
@@ -112,7 +112,7 @@ contract("Sign Up flow", accounts => {
             await Token.approve(instance.address, fee, { from: accounts[5] })
             await Token.transfer(accounts[5], fee, { from: ownerAddress })
             const tx = await instance.CreateNewPool(Token.address, fee, { from: accounts[5] })
-            poolId = tx.logs[2].args.PoolId
+            poolId = tx.logs[tx.logs.length - 1].args.PoolId
             const result = await instance.poolsMap(poolId)
             await Token.transfer(accounts[4], fee, { from: ownerAddress })
             await Token.approve(result['BaseFee'], fee, { from: accounts[4] })
